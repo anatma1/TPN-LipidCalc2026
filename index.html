@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+=<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -7,12 +7,13 @@
     <style>
         :root {
             --primary: #0284c7; 
-            --primary-light: #e0f2fe; /* תכלת עדין */
+            --primary-light: #e0f2fe;
             --primary-soft: #f0f9ff;
             --success: #059669; 
+            --success-light: #d1fae5;
             --success-bg: #ecfdf5;
             --warning: #d97706; 
-            --warning-light: #fef9c3; /* צהוב פסטל */
+            --warning-light: #fef9c3;
             --danger: #dc2626;
             --danger-bg: #fef2f2;
             --bg: linear-gradient(135deg, #f0fdfa 0%, #eff6ff 100%); 
@@ -75,7 +76,6 @@
             box-sizing: border-box; background: #f8fafc;
         }
 
-        /* שדה משקל - תכלת עדין */
         .weight-input {
             width: 85px !important;
             background: var(--primary-light) !important;
@@ -83,12 +83,24 @@
             text-align: center;
         }
 
-        /* שדה קצב - צהוב פסטל */
         .rate-input {
             width: 85px !important;
             background: var(--warning-light) !important;
             border-color: #fde047 !important;
             text-align: center;
+        }
+
+        /* עיצוב כפתור בחירת מצב */
+        .mode-toggle {
+            display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 15px;
+        }
+        .mode-toggle label {
+            flex: 1; text-align: center; padding: 8px; font-size: 0.85rem; font-weight: 700;
+            cursor: pointer; border-radius: 9px; transition: 0.2s; color: var(--text-muted);
+        }
+        .mode-toggle input { display: none; }
+        .mode-toggle input:checked + label {
+            background: #ffffff; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
         .result-card {
@@ -135,10 +147,18 @@
         <p>Schneider Children's Medical Center</p>
     </div>
     <div class="content">
+        
+        <div class="mode-toggle">
+            <input type="radio" name="calcMode" id="startMode" value="starter" checked onchange="calc()">
+            <label for="startMode">התחלת הזנה</label>
+            <input type="radio" name="calcMode" id="weanMode" value="weaning" onchange="calc()">
+            <label for="weanMode">בגמילה מ-TPN</label>
+        </div>
+
         <div class="input-card">
             <div class="input-row">
                 <div class="step-title" style="margin:0;"><div class="step-num">1</div><div class="step-text">משקל המטופל (ק"ג)</div></div>
-                <input type="number" id="w" class="weight-input" placeholder="0.0" min="0.1" step="0.1" oninput="calc()">
+                <input type="number" id="w" class="weight-input" placeholder="להזין מספר" min="0.1" step="0.1" oninput="calc()">
             </div>
         </div>
         <div class="input-card">
@@ -156,7 +176,7 @@
             </select>
             <div class="input-row">
                 <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">קצב שקית (מ"ל/שעה)</span>
-                <input type="number" id="rBag" class="rate-input" placeholder="0.0" min="0.1" step="0.1" oninput="calc()">
+                <input type="number" id="rBag" class="rate-input" placeholder="להזין מספר" min="0.1" step="0.1" oninput="calc()">
             </div>
         </div>
         <div class="input-card">
@@ -186,14 +206,39 @@ function updateBagColor() {
     b.style.fontWeight = 'bold';
 }
 function calc() {
-    const w = parseFloat(document.getElementById('w').value), b = document.getElementById('bag'), r = parseFloat(document.getElementById('rBag').value), f = parseFloat(document.getElementById('fType').value), c = document.getElementById('resCard'), p = document.getElementById('pharmacyWarning');
+    const w = parseFloat(document.getElementById('w').value);
+    const b = document.getElementById('bag');
+    const r = parseFloat(document.getElementById('rBag').value);
+    const f = parseFloat(document.getElementById('fType').value);
+    const c = document.getElementById('resCard');
+    const p = document.getElementById('pharmacyWarning');
+    const isWeaning = document.getElementById('weanMode').checked;
+    
     if (!w || w <= 0 || !b.value || !r || r <= 0 || !f) { c.style.display = 'none'; return; }
     c.style.display = 'block';
-    const o = b.options[b.selectedIndex], k = (r * 24) * (parseFloat(o.dataset.kcal) / parseFloat(o.dataset.vol));
-    const m = (f === 10) ? 1.0 : 1.5, lw = w * m, lp = ((4/6) * k) / 10;
+    
+    const o = b.options[b.selectedIndex];
+    const k = (r * 24) * (parseFloat(o.dataset.kcal) / parseFloat(o.dataset.vol));
+    
+    // הגדרת המגבלה לפי המצב שנבחר (התחלה מול גמילה)
+    let weightLimit = isWeaning ? 3.0 : 1.5;
+    
+    // הגנה קריטית: אומגוון תמיד מוגבל ל-1 ג'/ק"ג, גם בגמילה מ-TPN
+    if (f === 10) weightLimit = 1.0; 
+
+    const lw = w * weightLimit, lp = ((4/6) * k) / 10;
     let fg = 0, t = document.getElementById('reasonTag');
-    if (lw <= lp) { fg = lw; t.innerHTML = `⚖️ הוגבל לפי משקל (${m} ג'/ק"ג)`; t.className = "reason-box reason-weight"; }
-    else { fg = lp; t.innerHTML = "🔥 הוגבל לפי קלוריות (40% מהסך)"; t.className = "reason-box reason-perc"; }
+    
+    if (lw <= lp) { 
+        fg = lw; 
+        t.innerHTML = `⚖️ הוגבל לפי משקל (${weightLimit} ג'/ק"ג)`; 
+        t.className = "reason-box reason-weight"; 
+    } else { 
+        fg = lp; 
+        t.innerHTML = "🔥 הוגבל לפי קלוריות (40% מהסך)"; 
+        t.className = "reason-box reason-perc"; 
+    }
+    
     document.getElementById('resRate').innerText = ((fg * f) / 24).toFixed(1);
     document.getElementById('resMeta').innerHTML = `סה"כ שומן יומי: <b>${fg.toFixed(1)} גרם</b><br>יחס שומן למשקל: <b>${(fg/w).toFixed(2)} גרם/ק"ג</b>`;
     p.style.display = (f === 10) ? 'block' : 'none';
