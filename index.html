@@ -116,6 +116,13 @@
             background: #ffffff; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
+        .custom-omg-card {
+            background: #fff7ed; border: 1px solid #ffedd5;
+            border-radius: 14px; padding: 12px; margin-top: 10px;
+            display: none; animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown { from { opacity:0; transform: translateY(-10px); } to { opacity:1; transform: translateY(0); } }
+
         .fluid-info-inline {
             font-size: 0.8rem; font-weight: 700; color: #0369a1;
             margin-top: 8px; text-align: left; padding-left: 5px;
@@ -162,6 +169,7 @@
         option.dex-10 { color: #3b82f6; font-weight: bold; } 
         option.dex-12-5 { color: #10b981; font-weight: bold; } 
         option.dex-15 { color: #ef4444; font-weight: bold; } 
+
     </style>
 </head>
 <body>
@@ -209,15 +217,30 @@
             </div>
             <div id="fluidInfo" class="fluid-info-inline"></div>
         </div>
+
         <div class="input-card">
             <div class="step-title"><div class="step-num">3</div><div class="step-text">🥑 בחירת תמיסת שומן</div></div>
-            <select id="fType" onchange="calc()">
+            <select id="fType" onchange="toggleCustomOmg(); calc();">
                 <option value="" disabled selected>בחר סוג שומן...</option>
                 <option value="6">מזרק SMOF + Vitamines</option>
                 <option value="10">Omegaven (10%)</option>
+                <option value="CUSTOM">מזרק אומגוון עם ויטמינים (הזנה ידנית)</option>
                 <option value="5">בקבוק SMOF / Lipofundin (20%)</option>
             </select>
+
+            <div id="customOmgPanel" class="custom-omg-card">
+                <div style="font-size: 0.85rem; font-weight: 800; color: #9a3412; margin-bottom: 10px;">📊 נתוני מזרק מהרוקחת:</div>
+                <div class="input-row" style="margin-bottom: 8px;">
+                    <span style="font-size: 0.8rem; font-weight: 600;">גרם אומגוון במזרק:</span>
+                    <input type="number" id="omgGrams" style="width: 70px; padding: 5px;" value="3" oninput="calc()">
+                </div>
+                <div class="input-row">
+                    <span style="font-size: 0.8rem; font-weight: 600;">סך מ"ל נוזל במזרק:</span>
+                    <input type="number" id="omgVol" style="width: 70px; padding: 5px;" value="40" oninput="calc()">
+                </div>
+            </div>
         </div>
+
         <div id="resCard" class="result-card">
             <div id="resRate" class="result-val">0.0</div>
             <div style="font-weight:800; font-size:1rem; color:#059669;">מ"ל / שעה</div>
@@ -229,6 +252,7 @@
     </div>
     <div class="footer">כל הזכויות שמורות לענת מסלנסקי - דיאטנית קלינית.</div>
 </div>
+
 <script>
 function stepRate(val) {
     const r = document.getElementById('rBag');
@@ -245,11 +269,16 @@ function updateBagColor() {
     b.style.fontWeight = 'bold';
 }
 
+function toggleCustomOmg() {
+    const fType = document.getElementById('fType').value;
+    document.getElementById('customOmgPanel').style.display = (fType === 'CUSTOM') ? 'block' : 'none';
+}
+
 function calc() {
     const w = parseFloat(document.getElementById('w').value);
     const b = document.getElementById('bag');
     const r = parseFloat(document.getElementById('rBag').value);
-    const f = parseFloat(document.getElementById('fType').value);
+    const fSelection = document.getElementById('fType').value;
     const c = document.getElementById('resCard');
     const p = document.getElementById('pharmacyWarning');
     const sn = document.getElementById('syringeNote');
@@ -264,25 +293,35 @@ function calc() {
         fi.style.display = 'none';
     }
 
-    if (!w || w <= 0 || !b.value || isNaN(r) || r < 0 || !f) { c.style.display = 'none'; return; }
+    if (!w || w <= 0 || !b.value || isNaN(r) || r < 0 || !fSelection) { c.style.display = 'none'; return; }
     c.style.display = 'block';
     
+    let fRatio = 0;
+    const isOmegavenStandard = (fSelection === '10');
+    const isOmegavenCustom = (fSelection === 'CUSTOM');
+    const isSyringeSMOF = (fSelection === '6');
+
+    if (isOmegavenCustom) {
+        const omgGrams = parseFloat(document.getElementById('omgGrams').value) || 1;
+        const omgVol = parseFloat(document.getElementById('omgVol').value) || 1;
+        fRatio = omgVol / omgGrams;
+    } else {
+        fRatio = parseFloat(fSelection);
+    }
+
     const o = b.options[b.selectedIndex];
     const k = (r * 24) * (parseFloat(o.dataset.kcal) / parseFloat(o.dataset.vol));
     
-    let weightLimit = isWeaning ? 3.0 : 1.5;
-    if (f === 10) weightLimit = 1.0; 
+    let weightLimit = (isOmegavenStandard || isOmegavenCustom) ? 1.0 : (isWeaning ? 3.0 : 1.5);
 
     const lw = w * weightLimit;
     const lp = ((4/6) * k) / 10;
     
     let fg = 0, t = document.getElementById('reasonTag');
-    const isOmegaven = (f === 10);
-    const isSyringe = (f === 6);
 
-    if (isOmegaven && (10.0 <= lw && 10.0 <= lp)) {
+    if ((isOmegavenStandard || isOmegavenCustom) && (10.0 <= lw && 10.0 <= lp)) {
         fg = 10.0;
-        t.innerHTML = "🚫 הוגבל לנפח מקסימלי (100 מ\"ל)";
+        t.innerHTML = "🚫 הוגבל לנפח מקסימלי (100 מ\"ל אומגוון)";
         t.className = "reason-box reason-vol";
     } else if (lw <= lp) { 
         fg = lw; 
@@ -294,28 +333,27 @@ function calc() {
         t.className = "reason-box reason-perc"; 
     }
     
-    // החישוב המדויק עם עיגול למטה (Floor) למניעת חריגה מ-40%
-    const fRateRaw = (fg * f) / 24;
+    const fRateRaw = (fg * fRatio) / 24;
     const fRateRounded = Math.floor(fRateRaw * 10) / 10; 
     document.getElementById('resRate').innerText = fRateRounded.toFixed(1);
 
-    if (isSyringe) {
-        const totalVolSyringe = fg * f;
+    if (isSyringeSMOF) {
+        const totalVolSyringe = fg * fRatio;
         sn.style.display = "inline-block";
         if (totalVolSyringe <= 45) {
-            sn.innerText = "💉 לשימוש במזרק 45 מ\"ל";
+            sn.innerText = `💉 לשימוש במזרק 45 מ"ל`;
             sn.style.background = "#334155";
         } else {
-            sn.innerText = "💉 לשימוש במזרק 60 מ\"ל";
+            sn.innerText = `💉 לשימוש במזרק 60 מ"ל`;
             sn.style.background = "#0284c7";
         }
     } else {
         sn.style.display = "none";
     }
 
-    document.getElementById('resMeta').innerHTML = `סה"כ שומן יומי: <b>${fg.toFixed(1)} גרם</b> (${(fg*f).toFixed(0)} מ"ל)<br>יחס שומן למשקל: <b>${(fg/w).toFixed(2)} ג'/ק"ג</b>`;
+    document.getElementById('resMeta').innerHTML = `סה"כ שומן יומי: <b>${fg.toFixed(1)} גרם</b> (${(fg*fRatio).toFixed(0)} מ"ל)${isOmegavenCustom ? '<br>יחס דילול: 1 ג\' : ' + fRatio.toFixed(1) + ' מ"ל' : ''}<br>יחס שומן למשקל: <b>${(fg/w).toFixed(2)} ג'/ק"ג</b>`;
     
-    p.style.display = isOmegaven ? 'block' : 'none';
+    p.style.display = (isOmegavenStandard || isOmegavenCustom) ? 'block' : 'none';
 }
 </script>
 </body>
