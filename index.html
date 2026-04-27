@@ -68,12 +68,12 @@
         }
         .step-text { font-weight: 700; font-size: 1rem; color: var(--text-main); }
 
-        .input-row { display: flex; align-items: center; justify-content: space-between; }
+        .input-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
         input, select {
             padding: 10px; border: 2px solid #f1f5f9;
             border-radius: 10px; font-size: 0.95rem; font-weight: 600;
-            box-sizing: border-box; background: #f8fafc;
+            box-sizing: border-box; color: var(--text-main); background: #f8fafc;
         }
 
         .weight-input {
@@ -81,28 +81,45 @@
             background: var(--primary-light) !important;
             border-color: #bae6fd !important;
             text-align: center;
-            padding: 10px 4px !important;
+        }
+
+        .rate-control {
+            display: flex; align-items: center;
+            background: var(--warning-light);
+            border: 2px solid #fde047;
+            border-radius: 10px; overflow: hidden;
         }
 
         .rate-input {
-            width: 110px !important;
-            background: var(--warning-light) !important;
-            border-color: #fde047 !important;
-            text-align: center;
-            padding: 10px 4px !important;
+            width: 60px !important; border: none !important;
+            background: transparent !important; text-align: center;
+            padding: 10px 0 !important; font-size: 1.1rem !important;
         }
 
-        /* עיצוב כפתור בחירת מצב */
+        .step-btn {
+            background: rgba(234, 179, 8, 0.1); border: none;
+            color: var(--warning); font-size: 1.2rem; font-weight: 800;
+            width: 35px; height: 100%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+
         .mode-toggle {
             display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 15px;
         }
         .mode-toggle label {
-            flex: 1; text-align: center; padding: 8px; font-size: 0.85rem; font-weight: 700;
+            flex: 1; text-align: center; padding: 10px 5px; font-size: 0.85rem; font-weight: 800;
             cursor: pointer; border-radius: 9px; transition: 0.2s; color: var(--text-muted);
+            line-height: 1.3;
         }
         .mode-toggle input { display: none; }
         .mode-toggle input:checked + label {
             background: #ffffff; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .fluid-info-inline {
+            font-size: 0.8rem; font-weight: 700; color: #0369a1;
+            margin-top: 8px; text-align: left; padding-left: 5px;
+            display: none;
         }
 
         .result-card {
@@ -117,10 +134,16 @@
             display: inline-flex; align-items: center;
             padding: 5px 12px; border-radius: 20px;
             font-size: 0.75rem; font-weight: 700; margin: 8px 0;
-            white-space: nowrap; 
         }
         .reason-weight { background: #ffffff; color: var(--primary); border: 1px solid var(--primary-light); }
         .reason-perc { background: #ffffff; color: var(--warning); border: 1px solid #fde68a; }
+        .reason-vol { background: #ffffff; color: var(--danger); border: 1px solid #fecaca; }
+
+        .syringe-badge {
+            background: #334155; color: white; padding: 4px 12px;
+            border-radius: 8px; font-size: 0.8rem; font-weight: 800;
+            margin-top: 5px; display: inline-block;
+        }
 
         .result-meta { 
             font-size: 0.85rem; color: #064e3b; margin-top: 10px; 
@@ -152,9 +175,9 @@
         
         <div class="mode-toggle">
             <input type="radio" name="calcMode" id="startMode" value="starter" checked onchange="calc()">
-            <label for="startMode">התחלת הזנה</label>
+            <label for="startMode">התחלת הזנה<br>(עד 1.5 ג'/ק"ג)</label>
             <input type="radio" name="calcMode" id="weanMode" value="weaning" onchange="calc()">
-            <label for="weanMode">בגמילה מ-TPN</label>
+            <label for="weanMode">גמילה / מלאה<br>(עד 3 ג'/ק"ג)</label>
         </div>
 
         <div class="input-card">
@@ -165,7 +188,7 @@
         </div>
         <div class="input-card">
             <div class="step-title"><div class="step-num">2</div><div class="step-text">הגדרת שקית הזנה</div></div>
-            <select id="bag" onchange="updateBagColor(); calc();" style="margin-bottom: 10px;">
+            <select id="bag" onchange="updateBagColor(); calc();" style="margin-bottom: 12px;">
                 <option value="" disabled selected>בחירת שקית סטנדרטית...</option>
                 <option value="300-15" class="dex-15" data-kcal="189.9" data-vol="300">🔴 300ml 15%DEX</option>
                 <option value="500-12.5" class="dex-12-5" data-kcal="253" data-vol="500">🟢 500ml 12.5%DEX</option>
@@ -178,14 +201,19 @@
             </select>
             <div class="input-row">
                 <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">קצב שקית (מ"ל/שעה)</span>
-                <input type="number" id="rBag" class="rate-input" min="0.1" step="0.1" oninput="calc()">
+                <div class="rate-control">
+                    <button class="step-btn" onclick="stepRate(-1)">−</button>
+                    <input type="number" id="rBag" class="rate-input" min="0" step="1" oninput="calc()">
+                    <button class="step-btn" onclick="stepRate(1)">+</button>
+                </div>
             </div>
+            <div id="fluidInfo" class="fluid-info-inline"></div>
         </div>
         <div class="input-card">
             <div class="step-title"><div class="step-num">3</div><div class="step-text">🥑 בחירת תמיסת שומן</div></div>
             <select id="fType" onchange="calc()">
                 <option value="" disabled selected>בחר סוג שומן...</option>
-                <option value="6">מזרק SMOF+Vitamines</option>
+                <option value="6">מזרק SMOF + Vitamines</option>
                 <option value="10">Omegaven (10%)</option>
                 <option value="5">בקבוק SMOF / Lipofundin (20%)</option>
             </select>
@@ -193,6 +221,7 @@
         <div id="resCard" class="result-card">
             <div id="resRate" class="result-val">0.0</div>
             <div style="font-weight:800; font-size:1rem; color:#059669;">מ"ל / שעה</div>
+            <div id="syringeNote" class="syringe-badge" style="display:none;"></div>
             <div id="reasonTag" class="reason-box"></div>
             <div id="resMeta" class="result-meta"></div>
             <div id="pharmacyWarning" class="pharmacist-warning">⚠️ <b>שים/י לב:</b> באומגוון עם ויטמינים - יש להתייעץ עם הרוקחת.</div>
@@ -201,12 +230,21 @@
     <div class="footer">כל הזכויות שמורות לענת מסלנסקי - דיאטנית קלינית.</div>
 </div>
 <script>
+function stepRate(val) {
+    const r = document.getElementById('rBag');
+    let current = parseInt(r.value) || 0;
+    r.value = Math.max(0, current + val);
+    calc();
+}
+
 function updateBagColor() {
     const b = document.getElementById('bag');
     const s = b.options[b.selectedIndex];
+    if(!s.value) return;
     b.style.color = s.classList.contains('dex-10') ? '#3b82f6' : s.classList.contains('dex-12-5') ? '#10b981' : s.classList.contains('dex-15') ? '#ef4444' : '';
     b.style.fontWeight = 'bold';
 }
+
 function calc() {
     const w = parseFloat(document.getElementById('w').value);
     const b = document.getElementById('bag');
@@ -214,26 +252,41 @@ function calc() {
     const f = parseFloat(document.getElementById('fType').value);
     const c = document.getElementById('resCard');
     const p = document.getElementById('pharmacyWarning');
+    const sn = document.getElementById('syringeNote');
+    const fi = document.getElementById('fluidInfo');
     const isWeaning = document.getElementById('weanMode').checked;
     
-    if (!w || w <= 0 || !b.value || !r || r <= 0 || !f) { c.style.display = 'none'; return; }
+    if (w > 0 && !isNaN(r)) {
+        const bagFluidPerKg = (r * 24) / w;
+        fi.innerText = `💧 מנפח השקית בלבד: ${bagFluidPerKg.toFixed(1)} מ"ל/ק"ג ליממה`;
+        fi.style.display = 'block';
+    } else {
+        fi.style.display = 'none';
+    }
+
+    if (!w || w <= 0 || !b.value || isNaN(r) || r < 0 || !f) { c.style.display = 'none'; return; }
     c.style.display = 'block';
     
     const o = b.options[b.selectedIndex];
     const k = (r * 24) * (parseFloat(o.dataset.kcal) / parseFloat(o.dataset.vol));
     
-    // הגדרת המגבלה לפי המצב שנבחר (התחלה מול גמילה)
     let weightLimit = isWeaning ? 3.0 : 1.5;
-    
-    // הגנה קריטית: אומגוון תמיד מוגבל ל-1 ג'/ק"ג, גם בגמילה מ-TPN
     if (f === 10) weightLimit = 1.0; 
 
-    const lw = w * weightLimit, lp = ((4/6) * k) / 10;
-    let fg = 0, t = document.getElementById('reasonTag');
+    const lw = w * weightLimit;
+    const lp = ((4/6) * k) / 10;
     
-    if (lw <= lp) { 
+    let fg = 0, t = document.getElementById('reasonTag');
+    const isOmegaven = (f === 10);
+    const isSyringe = (f === 6);
+
+    if (isOmegaven && (10.0 <= lw && 10.0 <= lp)) {
+        fg = 10.0;
+        t.innerHTML = "🚫 הוגבל לנפח מקסימלי (100 מ\"ל)";
+        t.className = "reason-box reason-vol";
+    } else if (lw <= lp) { 
         fg = lw; 
-        t.innerHTML = `⚖️ הוגבל לפי משקל (${weightLimit} ג'/ק"ג)`; 
+        t.innerHTML = `⚖️ הוגבל לפי משקל (${weightLimit} ג'/ק\"ג)`; 
         t.className = "reason-box reason-weight"; 
     } else { 
         fg = lp; 
@@ -241,9 +294,28 @@ function calc() {
         t.className = "reason-box reason-perc"; 
     }
     
-    document.getElementById('resRate').innerText = ((fg * f) / 24).toFixed(1);
-    document.getElementById('resMeta').innerHTML = `סה"כ שומן יומי: <b>${fg.toFixed(1)} גרם</b><br>יחס שומן למשקל: <b>${(fg/w).toFixed(2)} גרם/ק"ג</b>`;
-    p.style.display = (f === 10) ? 'block' : 'none';
+    // החישוב המדויק עם עיגול למטה (Floor) למניעת חריגה מ-40%
+    const fRateRaw = (fg * f) / 24;
+    const fRateRounded = Math.floor(fRateRaw * 10) / 10; 
+    document.getElementById('resRate').innerText = fRateRounded.toFixed(1);
+
+    if (isSyringe) {
+        const totalVolSyringe = fg * f;
+        sn.style.display = "inline-block";
+        if (totalVolSyringe <= 45) {
+            sn.innerText = "💉 לשימוש במזרק 45 מ\"ל";
+            sn.style.background = "#334155";
+        } else {
+            sn.innerText = "💉 לשימוש במזרק 60 מ\"ל";
+            sn.style.background = "#0284c7";
+        }
+    } else {
+        sn.style.display = "none";
+    }
+
+    document.getElementById('resMeta').innerHTML = `סה"כ שומן יומי: <b>${fg.toFixed(1)} גרם</b> (${(fg*f).toFixed(0)} מ"ל)<br>יחס שומן למשקל: <b>${(fg/w).toFixed(2)} ג'/ק"ג</b>`;
+    
+    p.style.display = isOmegaven ? 'block' : 'none';
 }
 </script>
 </body>
